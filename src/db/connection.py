@@ -1,7 +1,9 @@
+import os
 import psycopg2
 from psycopg2 import sql
 from psycopg2.extras import execute_values
 import logging
+
 
 logger = logging.getLogger(__name__)
 
@@ -84,9 +86,9 @@ def fill_rel_tables(conn, regions, areas, cities, plans, streets, hiers):
                                 from fias.Plan as r
                                 join fias.hier_temp as h on h.parent_object_id  = r.object_id
                                 where h.object_id = t.object_id''')
-
-        cur.execute('drop table fias.hier_temp;')
         logger.info('Построены связи в Street')
+        cur.execute('drop table fias.hier_temp;')
+
         conn.commit()
 
 def fill_fts_fields(conn, region_code):
@@ -112,7 +114,7 @@ def truncate_help(conn):
         cur.execute('truncate table fias.level_types;')
         conn.commit()
 
-def drop_indices_full(conn):
+def drop_indexes_full(conn):
     with conn.cursor() as cur:
         cur.execute(f'drop index if exists idx_addr_obj_type_name;')
         cur.execute('drop index if exists idx_addr_obj_object_id;')
@@ -122,7 +124,7 @@ def drop_indices_full(conn):
         cur.execute('drop index if exists idx_hier_object_id;')
         conn.commit()
 
-def drop_indices_rel(conn):
+def drop_indexes_rel(conn):
     with conn.cursor() as cur:
         cur.execute(f'drop index if exists idx_region_type_name;')
         cur.execute('drop index if exists idx_area_type_name;')
@@ -131,7 +133,7 @@ def drop_indices_rel(conn):
         cur.execute('drop index if exists idx_street_type_name;')
         conn.commit()
 
-def create_indices_full(conn):
+def create_indexes_full(conn):
     with conn.cursor() as cur:
         cur.execute('create index if not exists idx_addr_obj_type_name on fias.addr_obj(name, type_name);')
         cur.execute('create index if not exists idx_addr_obj_object_id on fias.addr_obj(object_id);')
@@ -139,7 +141,7 @@ def create_indices_full(conn):
         cur.execute('create index if not exists idx_hierarchy_object_id on fias.hierarchy(object_id);')
         conn.commit()
 
-def create_indices_rel(conn):
+def create_indexes_rel(conn):
     with conn.cursor() as cur:
         cur.execute('create index if not exists idx_region_type_name on fias.Region(name, type_name);')
         cur.execute('create index if not exists idx_area_type_name on fias.Area(name, type_name);')
@@ -163,12 +165,36 @@ def insert_into_table(conn, table_name, fields, values):
         conn.commit()
 
 def drop_full(conn):
+    file_name = f'{os.path.dirname(os.path.abspath(__file__))}/sql/create_tables_full.sql'
     with conn.cursor() as cur:
-        with open('db/sql/create_tables_full.sql', 'r') as sql:
+        with open(file_name, 'r') as sql:
             cur.execute(sql.read())
 
 def drop_rel(conn):
+    file_name = f'{os.path.dirname(os.path.abspath(__file__))}/sql/create_tables_rel.sql'
     with conn.cursor() as cur:
-        with open('db/sql/create_tables_rel.sql', 'r') as sql:
+        with open(file_name, 'r') as sql:
             cur.execute(sql.read())
         conn.commit()
+
+def get_addr_obj_types(conn):
+    cur = conn.cursor()
+    cur.execute("select ltv.type_code, ltv.short_name, ltv.level from fias.level_types_view as ltv where ltv.is_active and ltv.level in (1, 2, 5, 6, 7, 8)")
+    rows = cur.fetchall()
+    socr_types = dict()
+    for row in rows:
+        tn, sn, lvl = row
+        sn = sn.replace('.', '').lower()
+        if lvl == 1 and sn not in ['г', 'гфз',] or sn in ['ао']:
+            socr_types[sn] = "region"
+        elif lvl == 2 and sn not in ['г', 'гфз', 'п', 'пос', 'тер']:
+            socr_types[sn] = "area"
+        elif sn not in ['кв-л'] and (sn in ['г', 'гфз', 'п', 'пос', 'тер', 'аал', 'д', 'с', 'сл', 'г-к', 'х'] or lvl == 5 or lvl == 6):
+            socr_types[sn] = "city"
+        elif lvl == 7  and sn not in ['р-н']:
+            socr_types[sn] = "street_dop"
+        elif lvl == 8 and sn not in ['р-н']:
+            socr_types[sn] = "street"
+
+    cur.close()
+    conn.close()

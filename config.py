@@ -7,8 +7,12 @@ config = {
         'password': 'postgres'
     },
 
-    'default': {
+    'load': {
     'gar_path': 'C:\\Users\\cadin\\Desktop\\gar_xml.zip',
     'regions': []
+    },
+
+    'search': {
+        'source_path': './address_data.txt'
     }
 }

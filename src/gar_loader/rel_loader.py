@@ -1,10 +1,10 @@
 import os
-import config
 import zipfile
 import re
 import lxml.etree as ET
-from db import connection
 import logging
+
+from src.db import connection
 
 logger = logging.getLogger(__name__)
 
@@ -88,11 +88,11 @@ def parse_addr_objs(doc, dir):
             regions.append([object_id, dir, name, type_name])
         elif level == '2' and type_name not in city_names:
             areas.append([object_id, dir, name, type_name])
-        elif level == '5' or level == '6' or type_name in city_names and level in (1, 2):
+        elif level == '5' or level == '6' or type_name in city_names and level in ('1', '2'):
             cities.append([object_id, dir,  name, type_name])
         elif level == '7' and type_name not in street_names:
             plans.append([object_id, dir, name, type_name])
-        elif level == '8' or type_name in street_names:
+        elif level == '8' or level == '7':# or type_name in street_names:
             streets.append([object_id, dir, name, type_name])
 
         element.clear()

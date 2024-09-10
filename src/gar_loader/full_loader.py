@@ -1,9 +1,9 @@
 import re
 import zipfile
 import logging
-from db import connection
-
 from lxml import etree as ET
+
+from src.db import connection
 
 logger = logging.getLogger(__name__)
 
@@ -93,13 +93,19 @@ def parse_xml(xml_file, dir):
             if tag == 'OBJECT' and (element.get('ISACTIVE') != '1' or element.get('ISACTUAL') != '1'):
                 element.clear()
                 continue
+
             if tag == 'ITEM' and element.get('ISACTIVE') != '1':
                 element.clear()
                 continue
 
-            values = [element.get(field) for field in table_fields[table_name]]
+            if tag == "OBJECT":
+                type_name = element.get('TYPENAME').replace('.', '').lower()
+                name = element.get("NAME").replace('.', '').lower()
+                values = [element.get('OBJECTID'), name, type_name, element.get("LEVEL"), dir]
+            else:
+                values = [element.get(field) for field in table_fields[table_name]]
 
-            if tag == "OBJECT" or tag == "ITEM":
+            if tag == "ITEM":
                 values.append(dir)
 
             data.append(values)

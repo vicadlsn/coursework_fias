@@ -43,7 +43,7 @@ begin
 		
 		-- Рекурсивный запрос: собираем полные адреса
 		SELECT
-			h.object_id,
+			ah.object_id,
 			ah.path,
 			CONCAT(a.type_name, ' ', a.name, ', ', ah.full_address) AS full_address,
 			h.parent_object_id
@@ -59,6 +59,6 @@ begin
 		full_address = ah.full_address,
 		full_text = to_tsvector(ah.full_address)
 	FROM address_hierarchy as ah
-	where ah.parent_object_id = 0;
+	where ah.parent_object_id = 0 and ah.object_id = ao.object_id;
 end;
 $$;
